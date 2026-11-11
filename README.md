@@ -1,85 +1,135 @@
-# Mobile Challenge 20240202
+# Lexi · English Dictionary
 
-## Introdução
+Um aplicativo em **React Native + Expo + TypeScript** para descobrir palavras em inglês, ouvir a pronúncia e construir uma coleção pessoal.
 
-Este é um teste para que possamos ver as suas habilidades como Mobile Developer.
+> This is a challenge by [Coodesh](https://coodesh.com/)
 
-Nesse desafio você deverá desenvolver um aplicativo para listar palavras em inglês, utilizando como base a API [Free Dictionary API](https://dictionaryapi.dev/). O projeto a ser desenvolvido por você tem como objetivo exibir termos em inglês e gerenciar as palavras visualizadas, conforme indicado nos casos de uso que estão logo abaixo.
+O enunciado original está preservado em [CHALLENGE.md](./CHALLENGE.md). O wireframe de referência está em [img/wireframe.png](./img/wireframe.png).
 
-[SPOILER] As instruções de entrega e apresentação do challenge estão no final deste Readme (=
+## Executar
 
-### Antes de começar
- 
-- Considere como deadline da avaliação a partir do início do teste. Caso tenha sido convidado a realizar o teste e não seja possível concluir dentro deste período, avise a pessoa que o convidou para receber instruções sobre o que fazer.
-- Documentar todo o processo de investigação para o desenvolvimento da atividade (README.md no seu repositório); os resultados destas tarefas são tão importantes do que o seu processo de pensamento e decisões à medida que as completa, por isso tente documentar e apresentar os seus hipóteses e decisões na medida do possível.
+Pré-requisitos: Node.js 20.19.4+ (ou uma versão LTS mais recente compatível com Expo 54), npm e Expo Go compatível com SDK 54, ou development build. No iOS, builds locais exigem macOS/Xcode configurado; Android exige Android Studio para o emulador. Um aparelho físico pode acessar o Metro na mesma rede.
 
-### Instruções iniciais obrigatórias
+```sh
+npm install
+npx expo install --check
+npm run words:import
+npm start
+```
 
-- Utilize as seguintes tecnologias:
+Use `i` para abrir o simulador iOS, `a` para Android ou leia o QR code com Expo Go compatível. Alternativas: `npm run ios`, `npm run android`, `npm run web`.
 
-#### Tecnologias (Mobile):
-- Nativo ou Hibrido (Flutter, Ionic, React Native, etc)
-- Estilização (Material, Semantic, etc). Ou escrever o seu próprio sob medida 👌
-- Gestão de dados (Redux, Context API, IndexedDB, SQLite, etc)
+**A lista completa precisa ser importada antes da avaliação.** `words:import` baixa o `words_dictionary.json` oficial de [dwyl/english-words](https://github.com/dwyl/english-words), valida pelo menos 300 mil palavras e gera `src/data/words.json`. Também aceita arquivo local:
 
-Atente-se, ao desenvolver a aplicação mobile, para conceitos de usabilidade e adeque a interface com elementos visuais para os usuários do seu sistema.
+```sh
+npm run words:import -- /caminho/words_dictionary.json
+```
 
-#### Tecnologias (Back-End):
-- Firebase, Supabase, etc
+O arquivo fornecido nesta implementação contém uma **lista inicial reduzida**, identificada na interface. Não representa o corpus completo do desafio. A importação preserva a lista anterior se a rede ou a validação falhar. Depois de importar, reinicie o Metro se necessário. A fonte permanece incluída no aplicativo e não depende da rede para navegar na lista. Consulte a licença e os avisos do repositório original ao distribuir os dados importados.
 
-#### Organização:
-- Aplicação de padrões Clean Code
-- Validação de chamadas assíncronas para evitar travamentos
+## Backend e contas
 
-### Modelo de Dados:
+1. Crie um projeto no [Supabase](https://supabase.com/).
+2. Execute `supabase/schema.sql` no SQL Editor uma única vez.
+3. Copie `.env.example` para `.env` e informe a URL e a chave pública anon do projeto.
+4. Habilite o provedor Email em Authentication. O fluxo suporta confirmação por email: confirme a conta e volte ao aplicativo para entrar.
+5. Reinicie o Metro após alterar o ambiente.
 
-Conforme indicado na documentação da API, a API retorna as informações de uma palavra, tais como etimologia, sinônimos, exemplos de uso, etc. Utilize os campos indicados na documentação dos endpoints para obter os dados necessários.
- 
-### Front-End:
+```dotenv
+EXPO_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=SUA-CHAVE-PUBLICA
+```
 
-Nessa etapa você deverá desenvolver uma aplicação móvel nativa ou hibrida para consumir a API do desafio.
+Nunca use uma chave `service_role` no aplicativo. RLS limita cada linha ao `auth.uid()` correspondente. A chave composta `(user_id, word)` evita registros duplicados; há índice para o histórico. `viewed_at` controla a recência. Login/cadastro usam Supabase Auth, não senhas armazenadas pelo aplicativo. A sessão é persistida com AsyncStorage conforme o fluxo de referência do Supabase para React Native; em uma evolução de produção, avaliar armazenamento criptografado de sessão conforme o modelo de ameaça.
 
-**Obrigatório 1** - Você deverá atender aos seguintes casos de uso:
+Sem credenciais, o aplicativo funciona como visitante, com favoritos e histórico locais. A tela de conta explica essa condição. As coleções visitante e autenticada são separadas e **não são mescladas automaticamente**. Contas configuradas usam o banco remoto como fonte de verdade; salvar favoritos e histórico nessa modalidade exige conexão e erros aparecem na tela. Não há fila de sincronização offline remota.
 
-- Como usuário, devo ser capaz de visualizar uma lista de palavras com rolagem infinita
-- Como usuário, devo ser capaz de visualizar uma palavra, significados e a fonética
-- Como usuário, devo ser capaz de salvar a palavra como favorito
-- Como usuário, devo ser capaz de remover a palavra como favorito
-- Como usuário, devo ser capaz de visitar uma lista com as palavras que já vi anteriormente
+## Funcionalidades
 
-A API não possui endpoint com a lista de palavras. Essa lista pode ser carregada em memória ou ser salva em banco de dados local ou remoto (por exemplo, com Firebase). Será necessário usar o [arquivo existente dentro do projeto no Github](https://github.com/dwyl/english-words/blob/master/words_dictionary.json).
+| Requisito | Implementação |
+| --- | --- |
+| Lista com rolagem infinita | FlatList virtualizada, páginas cumulativas de 60 palavras e botão acessível para carregar mais |
+| Detalhes | Modal com palavra, fonética disponível, todos os significados, exemplos, sinônimos e fonte |
+| Favoritar e remover | Botão Save/Saved, persistência local ou remota por usuário |
+| Histórico | Registro após consulta bem-sucedida, sem duplicatas, mais recente primeiro |
+| Cache | Persistente, chave normalizada, validade de sete dias, fallback expirado se a rede falhar |
+| Wireframe | Abas Word list/History/Favorites, grade, detalhes, voltar/próximo e pronúncia |
+| Áudio | Pronúncia nativa em inglês americano via expo-speech; botão para interromper |
+| Injeção de dependências | Repositório de coleção e cliente de dicionário com portas explícitas |
+| Testes | 12 testes de regras e do cliente de consulta real com rede/storage injetados |
+| Login e senha | Supabase Auth, favoritos e histórico associados ao usuário, políticas RLS |
 
-**Obrigatório 2** - Salvar em cache o resultado das requisições, para agilizar a resposta em caso de buscas com parâmetros repetidos.
+A Free Dictionary API não contém definições para todas as palavras do corpus. O app trata 404 sem registrar uma consulta malsucedida no histórico e permite tentar novamente. A busca filtra por **prefixo**, sobre toda a fonte selecionada; não se limita às palavras renderizadas. O botão próximo navega pela lista carregada no momento da abertura; carregar mais palavras na listagem amplia a próxima sessão de navegação.
 
-**Obrigatório 3** - Seguir o wireframe para a página de listagem dos dados. Pode-se alterar a posição dos itens, mantendo as funcionalidades solicitadas.
+## Design e acessibilidade
 
-<img src="./img/wireframe.png" width="100%" />
+A identidade usa fundo creme, verde profundo, títulos serifados e cartões com espaçamento generoso. As três abas do wireframe permanecem visíveis. O cartão editorial de destaque dá um ponto de partida à exploração; sua descrição é texto editorial, enquanto o detalhe vem da API. Textos em inglês mantêm a experiência consistente com o idioma estudado.
 
-**Diferencial 1** - Implementar um tocador de audio utilizando, por exemplo, https://responsivevoice.org/api ou recursos nativos;
+Há layouts com duas colunas no telefone e três em telas maiores, limite de largura em tablets, SafeArea, alvos de toque de pelo menos 48 pontos nas ações principais, estados de seleção, rótulos para leitores de tela, estados de carregamento, erro, retry e listas vazias. Textos usam escala de fonte do sistema. A conformidade completa com acessibilidade requer avaliação em aparelhos e leitores de tela.
 
-**Diferencial 2** - Utilizar alguma ferramenta de Injeção de Dependência;
+A pronúncia usa síntese nativa, sem biblioteca de áudio remota. Isso evita depender de URLs de áudio incompletas. Voz e disponibilidade offline dependem das vozes instaladas. No iPhone físico, `expo-speech` pode ficar silencioso com o modo silencioso ativado. A reprodução para ao trocar de palavra ou fechar o detalhe.
 
-**Diferencial 3** - Escrever Unit Tests ou E2E Test. Escolher a melhor abordagem e biblioteca;
+## Arquitetura
 
-**Diferencial 4** - Implementar login com usuário e senha e associar os favoritos e histórico ao ID do usuário, salvando essa informação em banco de dados local ou remoto
-## Readme do Repositório
+```text
+App.tsx                         Composição, sessão, busca e listagem
+src/components/                 Botões, autenticação e detalhe de palavra
+src/hooks/useCollection.ts      Estado e ciclo de vida da coleção
+src/services/collection.ts      Repositório com implementação local/remota
+src/services/dictionary.ts      Composição do cliente de consulta
+src/services/dictionary-client.mjs Cliente testável: cache, timeout e rede
+src/services/core.mjs            Regras puras de paginação e histórico
+src/services/supabase.ts         Cliente de autenticação/backend
+src/data/words.json              Corpus substituído pelo importador
+supabase/schema.sql             Tabela, índice e políticas RLS
+scripts/import-words.mjs         Importação verificável da fonte oficial
+tests/                          Testes executáveis sem dependências externas
+```
 
-- Deve conter o título do projeto
-- Uma descrição sobre o projeto em frase
-- Deve conter uma lista com linguagem, framework e/ou tecnologias usadas
-- Como instalar e usar o projeto (instruções)
-- Não esqueça o [.gitignore](https://www.toptal.com/developers/gitignore)
-- Se está usando github pessoal, referencie que é um challenge by coodesh:  
+Os arquivos `.mjs` de domínio têm declarações `.d.mts` para integração tipada com TypeScript. Essa pequena fronteira permite testar as regras que o app realmente importa com o runner nativo do Node, sem mocks do React Native nem transformação adicional.
 
->  This is a challenge by [Coodesh](https://coodesh.com/)
+### Performance e consistência
 
-## Finalização e Instruções para a Apresentação
+- FlatList monta uma janela de cartões; a paginação concatena a área visível sem substituir páginas anteriores.
+- Cartões usam `memo`; cálculos de busca/coleção usam `useMemo`; `useDeferredValue` permite priorizar a digitação. Filtrar o corpus ainda tem custo linear: uma evolução para datasets maiores seria indexar prefixos no SQLite.
+- O corpus é local e a API só é chamada ao abrir um detalhe.
+- Consultas simultâneas da mesma palavra compartilham uma Promise. Há timeout de 10 segundos, normalização de chave e cache entre reinicializações.
+- Falhas de escrita no cache não escondem um resultado válido. Cache corrompido é ignorado; resposta inválida não é armazenada. O cache não possui limite global de tamanho nesta versão.
+- Resultados de detalhes desmontados/trocados são ignorados. Consultas em andamento podem terminar para alimentar o cache, mas não alteram a tela antiga.
+- Escritas de coleção são serializadas no repositório; ações concorrentes na UI são bloqueadas durante a gravação. O estado só muda após confirmação da persistência.
+- Trocas de usuário invalidam respostas antigas da coleção; a renovação do token acompanha o ciclo de vida do app.
 
-1. Adicione o link do repositório com a sua solução no teste
-2. Verifique se o Readme está bom e faça o commit final em seu repositório;
-3. Envie e aguarde as instruções para seguir. Caso o teste tenha apresentação de vídeo, dentro da tela de entrega será possível gravar após adicionar o link do repositório. Sucesso e boa sorte. =)
+## Validação
 
+```sh
+npm test
+npm run typecheck
+npm run lint
+npx expo-doctor
+npx expo export --platform web
+```
 
-## Suporte
+**Executado neste ambiente:** verificação sintática de 10 arquivos TS/TSX com o compilador TypeScript (zero erros de sintaxe; não substitui typecheck com dependências) e `npm test` — 12 testes passaram, cobrindo paginação cumulativa, busca fora da primeira página, histórico sem duplicatas, preservação de favorito, cache entre clientes, deduplicação, fallback offline, 404 com retry, cache inválido, disco cheio, timeout e resposta inválida.
 
-Para tirar dúvidas sobre o processo envie uma mensagem diretamente a um especialista no chat da plataforma. 
+**Bloqueios verificados:** DNS/rede indisponível para npm e GitHub; instalação offline falhou por pacote ausente no cache. Por isso não foi possível gerar lockfile, importar o corpus completo, executar TypeScript/ESLint/Expo, renderizar a interface ou validar em emulador/dispositivo. O Git do sistema também exige aceite da licença do Xcode; nenhum commit foi criado. Não há alegação de build, teste visual ou integração Supabase executados.
+
+### Checklist manual após configurar o ambiente
+
+1. Importar o corpus completo, iniciar o app e rolar além de três páginas; confirmar que as anteriores permanecem.
+2. Buscar `hello`, abrir o detalhe, ouvir/parar a pronúncia e navegar entre palavras.
+3. Favoritar, consultar History/Favorites e reiniciar o app para verificar persistência.
+4. Abrir uma palavra em rede, reiniciar sem internet e repetir a consulta; testar uma palavra ainda não consultada.
+5. Testar um termo sem definição, erro de rede e retry; nenhum deles deve travar a tela.
+6. Criar duas contas Supabase; verificar isolamento, persistência ao entrar novamente e negação de leitura/escrita de linhas de outro usuário.
+7. Avaliar VoiceOver/TalkBack, fonte ampliada, teclado, telefone pequeno e tablet.
+
+## Investigação e decisões
+
+1. A leitura do README e do wireframe identificou a ausência de projeto inicial e a separação entre fonte de palavras e API de definições.
+2. React Native com Expo foi escolhido para compartilhar código iOS/Android e disponibilizar síntese nativa com menor esforço de configuração.
+3. Persistência de favoritos e cache são responsabilidades distintas: o cache é compartilhável por palavra; a coleção exige isolamento por usuário.
+4. Supabase atende ao backend pedido e ao diferencial de autenticação; o modo visitante mantém o aplicativo utilizável antes da configuração externa.
+5. Injeção via interfaces/fábricas evita um container de DI desnecessário neste tamanho de projeto.
+6. Testes priorizam contratos de dados e falhas assíncronas. A apresentação visual e os fluxos nativos ficam pendentes de execução real devido aos bloqueios registrados acima.
+
+Referências consultadas: [Dictionary API](https://dictionaryapi.dev/), [Supabase React Native Auth](https://supabase.com/docs/guides/auth/quickstarts/react-native), [Expo Speech](https://docs.expo.dev/versions/latest/sdk/speech/).
