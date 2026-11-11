@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Lexi · English Dictionary",
+    "slug": "lexi-dictionary",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.anacvignola.lexi"
+    },
+    "android": { "package": "dev.anacvignola.lexi" },
+    "web": { "name": "Lexi" }
+  }
+}
